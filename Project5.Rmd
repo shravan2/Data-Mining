@@ -1,0 +1,15 @@
+---
+title: "Project 5 Problem 5"
+author: "Sameena,Shravan Kumar Bittla"
+output: html_document
+---
+
+```{r}
+library(arules)
+library(arulesViz)
+trans = read.transactions(file="p5-4.txt",format="basket", sep=",");
+inspect(trans)
+image(trans)
+rules <- apriori(trans, parameter = list(sup = 0.6, conf = 0.8, target="rules"));
+inspect(rules)
+```
