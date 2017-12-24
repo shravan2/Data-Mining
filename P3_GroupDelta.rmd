@@ -1,0 +1,601 @@
+---
+title: "P3_GroupDelta"
+author: "Sameena Thabassum,Shravan Bittla, Satish Penumarti"
+date: "January 18, 2017"
+output:
+  html_document:
+  css: min.css
+highlight: textmate
+theme: null
+pdf_document: default
+---
+#Q1
+```{r}
+evalclass<-function(dt)
+{
+  tn<-0
+  tp<-0
+  fp<-0
+  fn<-0
+  class<-dt[,2]
+  pred<-dt[,3]
+  for(i in 1:nrow(dt))
+  {
+    if(class[i]==pred[i])
+    {
+      if(pred[i]==1)
+      {
+        tp<-tp+1
+      }
+      else
+      {
+        tn<-tn+1
+      }
+    }
+    else
+    {
+      if(pred[i]==1)
+      {
+        fp<-fp+1
+      }
+      else
+      {
+        fn<-fn+1
+      }
+    } 
+  }
+  # print(paste("tp",tp))
+  # print(paste("tn",tn))
+  # print(paste("fp",fp))
+  # print(paste("fn",fn))
+  tpr<-tp/(tp+fn)
+  tnr<-tn/(tn+fp)
+  fpr<-fp/(tn+fp)
+  sens<-tpr
+  spec<-tnr
+  precision<-tp/(tp+fp)
+  recall<-tp/(tp+fn)
+accu<-(tp+tn)/(tp+fp+fn+tn)
+err<-1-accu
+retr<-list(tpr,tnr,fpr,sens,spec,precision,recall,accu,err)
+return(retr)
+  }
+```
+#Q2
+```{r}
+acc<-vector('numeric')
+tpr<-vector('numeric')
+tnr<-vector('numeric')
+fpr<-vector('numeric')
+sample<-c(1:10)
+ytrue<-c(1,0,1,1,0,0,1,0,1,0)
+ypred<-c(0.98,0.92,0.85,0.77,0.71,0.64,0.50,0.39,0.34,0.31)
+yp<-vector('numeric')
+q2<-data.frame(sample,ytrue,ypred)
+for(i in 1:nrow(q2))
+{
+    tres<-q2$ypred[i]
+    for(j in 1:length(q2$ypred))
+    {
+      if(q2$ypred[j]>=tres)
+      {
+        yp[j]<-1
+      }
+      else
+      {
+        yp[j]<-0
+      }
+    }
+    dt<-data.frame(sample,ytrue,yp)
+    result<-evalclass(dt)
+    acc[i]<-result[[8]]
+    tpr[i]<-result[[1]]
+    tnr[i]<-result[[2]]
+    fpr[i]<-result[[3]]
+}
+q2res<-data.frame(sample,tpr,tnr,fpr,acc)
+print(q2res)
+```
+
+#Q3
+```{r}
+plot(fpr,tpr,xlab = "FPR",ylab="TPR",main = "ROC")
+lines(tpr,fpr)
+```
+
+#Q4
+```{r}
+M1<-c(30.5,32.2,20.7,20.6,31.0,41.0,27.7,26.0,21.5,26.0)
+M2<-c(22.4,14.5,22.4,19.6,20.7,20.4,22.1,19.4,16.2,35.0)
+avgM1<-mean(M1)
+avgM2<-mean(M2)
+print(paste("average error rate of model M1",avgM1))
+print(paste("average error rate of model M2",avgM2))
+```
+
+Average error rate of M2 is less than M1, So M1 is better than M2
+
+#Q5a
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#GINI for first Node
+```{r}
+N<- c(100,50,60)
+prob<-function(x){
+  x/210
+}
+d<-prob(N)
+GINI_N=1-sum(d^2)
+print(GINI_N)
+```
+#GINI for N11 Node
+```{r}
+N1<- c(62,8,0)
+prob<-function(x){
+  x/70
+}
+d1<-prob(N1)
+GINI_N1=1-sum(d1^2)
+print(GINI_N1)
+```
+
+```{r}
+#GINI for N12 Node
+N2<- c(38,42,60)
+prob<-function(x){
+  x/140
+}
+d2<-prob(N2)
+GINI_N2=1-sum(d2^2)
+print(GINI_N2)
+```
+
+```{r}
+#GINI for N21 Node
+N3<- c(65,20,0)
+prob<-function(x){
+  x/85
+}
+d3<-prob(N3)
+GINI_N3=1-sum(d3^2)
+print(GINI_N3)
+```
+
+```{r}
+#GINI for N22 Node
+N4<- c(21,19,20)
+prob<-function(x){
+  x/60
+}
+d4<-prob(N4)
+GINI_N4=1-sum(d4^2)
+print(GINI_N4)
+```
+#GINI for N23 Node
+```{r}
+N5<- c(14,11,40)
+prob<-function(x){
+  x/65
+}
+d5<-prob(N5)
+GINI_N5=1-sum(d5^2)
+print(GINI_N5)
+```
+
+# Gain for Split 1
+```{r}
+split1 <- GINI_N-(GINI_N1*sum(N1)+GINI_N2*sum(N2))/(sum(N1)+sum(N2))
+split2 <- GINI_N-(GINI_N3*sum(N3)+GINI_N4*sum(N4)+GINI_N5*sum(N5))/(sum(N3)+sum(N4)+sum(N5))
+print(split1)
+print(split2)
+```
+
+#Q5b
+We prefer Split 1 beacause the gain in GINI for split 1 is here then compared to split2
+so the next prefer node would be N11
+
+
+#Q5c
+```{r}
+##PartC Gain Based on entropy
+##Node N
+d11=log(d)
+Entropy=-(d*d11)
+first=sum(Entropy)
+print(paste("Entropy for N :",first))
+##Node N1
+
+d1n<-c(0.886,0.114,0.01)
+d12=log(d1n)
+Entropy1=-(d1*d12)
+second=sum(Entropy1)
+print(paste("Entropy for N11 :",second ))
+
+##Node N12
+
+d1k=log(d2)
+Entropy2=-(d2*d1k)
+third=sum(Entropy2)
+print(paste("Entropy for N12 :",third ))
+##Node N21
+d3n<-c(0.765,0.235,0.0001)
+d13=log(d3n)
+Entropy3=-(d3n*d13)
+fourth=sum(Entropy3)
+print(paste("Entropy for N21 :",fourth ))
+##Node N22
+d14=log(d4)
+Entropy4=-(d4*d14)
+fifth=sum(Entropy4)
+print(paste("Entropy for N22 :",fifth ))
+##Node N23
+d15=log(d5)
+Entropy5=-(d5*d15)
+sixth=sum(Entropy5)
+print(paste("Entropy for N23 :",sixth ))
+##Gain Entropy for Split 1
+Gain1=first-(second*sum(N1)+third*sum(N2))/(sum(N1)+sum(N2))
+print(Gain1)
+##Gain Entropy for Split2
+Gain2=first-(fourth*sum(N3)+fifth*sum(N4)+sixth*sum(N5))/(sum(N3)+sum(N4)+sum(N5))
+print(Gain2)
+
+```
+
+#Q5d
+We prefer the split 2 because the gain value for split2 is higher when compared to split1.SO the next node would be N21 
+
+
+#Q6a
+```{r}
+q6<-read.csv("syp-16-data.csv")
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("reshape2")
+library(reshape2)
+
+q6melt = melt(q6)
+ggplot(data = q6melt, aes(x=Adult, fill=factor(value)))+ geom_bar()+ facet_wrap(~variable, nrow = 5)
+```
+
+#Q6b
+SnapChat because the difference between high school and adult users for snapchat is the highest
+
+#Q6c
+```{r}
+library(rpart)
+library(rpart.plot)
+TreeModel<- rpart(Adult~.,data=q6,method="class")
+rpart.plot(TreeModel)
+```
+#Q7
+library(MASS)
+library(rpart)
+library(rpart.plot)
+
+#Q7a
+```{r}
+set.seed(111)
+spamd <- read.csv("spam.csv")
+#spamd<-spam[,c(-1,-2,-7,-11,-19,-20)]
+str(spamd)
+```
+
+#Q7b
+```{r}
+library(caTools)
+##Sampling the data
+ind<- sample.split(Y = spamd$spam,SplitRatio=0.8)
+traind<-spamd[ind,]
+testd<-spamd[!ind,]
+```
+
+#Q7c
+```{r}
+##Fitting the Model
+DecisionTreeModel<- rpart(spam ~. ,data=spamd,method='class')
+
+DecisionTreeModel<- rpart(spam ~ day.of.week+size.kb+box+digits+name+credit+special+porn+sucker, data=traind,method="class")
+plot(DecisionTreeModel)
+text(DecisionTreeModel, pretty=0)
+rpart.plot(DecisionTreeModel)
+summary(DecisionTreeModel)
+```
+
+
+#Q7d
+```{r}
+##Predict Train
+Predictd<- predict(DecisionTreeModel, traind, type='class')
+t<-table(predictions=Predictd,actual=traind$spam)
+
+print(t)
+
+
+##Predict Test
+Predictd1<- predict(DecisionTreeModel, testd, type='class')
+t1<-table(predictions=Predictd1,actual=testd$spam)
+print(t1)
+```
+
+8 terminal nodes and 15 nodes 
+
+#Q7e
+```{r}
+##Plotting ROC Curve 
+library(pROC)
+
+library(pROC)
+PredictionsWithProbs<-predict(DecisionTreeModel, testd, type='prob')
+auc <-auc(testd$spam,PredictionsWithProbs[,2])
+plot(roc(testd$spam,PredictionsWithProbs[,2]))
+
+##Accuracy on Train data
+accuracytrain=sum(diag(t))/sum(t)
+errorrate<-1-accuracytrain
+print(paste("accuracy: ",accuracytrain))
+print(paste("errorrate: ",errorrate))
+
+
+##Accuracy on Testdata
+accuracytest=sum(diag(t1))/sum(t1)
+errorrate1<-1-accuracytest
+print(paste("accuracy: ",accuracytest))
+print(paste("errorrate: ",errorrate1))
+
+```
+
+#Q7f
+```{r}
+#pruning
+printcp(DecisionTreeModel)
+plotcp(DecisionTreeModel)
+#ptree<-prune(DecisionTreeModel,cp=DecisionTreeModel$cptable[which.min(DecisionTreeModel$cptable[,"xerror"]),"CP"])
+ptree1<-prune(DecisionTreeModel,cp=0.053697)
+rpart.plot(ptree1,uniform=TRUE,main="Pruned Classification Tree with cp=0.053697")
+ptree2<-prune(DecisionTreeModel,cp=0.01)
+rpart.plot(ptree2,uniform=TRUE,main="Pruned Classification Tree with cp=0.01")
+
+```
+The value of cp should be least so that xerror is minimum
+
+#Q8
+#8a
+```{r}
+q3<-read.csv("music.csv",header = T)
+q3sub<-q3[,c(-2,-3,-4,-5)]
+```
+
+#8b
+```{r}
+q3c0<-q3sub[which(q3$Top10==0),]
+q3c1<-q3sub[which(q3$Top10==1),]
+nrow(q3c0)
+nrow(q3c1)
+```
+ we can have 6455 top10 value =0 and 1119 top10 value= 1
+9 folds with 757 rows(112 top10=1 ,645 top10=0) each and 10th fold will have 761 rows(111 top10=1 ,650 top10=0)
+
+```{r}
+l<-1
+r<-645
+folds<-list()
+for(i in 1:9)
+{
+  folds[[i]]<-q3c0[l:r,]
+  l<-l+645
+  r<-r+645
+}
+folds[[10]]<-q3c0[l:nrow(q3c0),]
+l<-1
+r<-112
+for(i in 1:9)
+{
+  folds[[i]]<-rbind(folds[[i]],q3c1[l:r,])
+  l<-l+112
+  r<-r+112
+}
+folds[[10]]<-rbind(folds[[10]],q3c1[l:nrow(q3c1),])
+```
+
+
+#8c
+```{r}
+# lib
+knnfun<-function(knn)
+{
+  library(pROC)
+  library(class)
+  library(ROCR)
+predobj<-lapply( rep("prediction", 10), new )
+prefobj<-lapply( rep("performance", 10), new )
+testfold<-vector(length = 10)
+aucvec<-vector(length = 10)
+acc<-vector(length = 10)
+err<-vector(length = 10)
+for(i in 1:10)
+{
+  train<-as.data.frame(NULL)
+  for(j in 1:10)
+  {
+    if(j!=i)
+    {    train<-rbind(train,folds[[j]])}
+
+  }
+  test<-folds[[i]]
+  pred<-knn(train,test,k=knn,cl=factor(train$Top10))
+  preddt<-as.vector(pred)
+  
+    # for(l in 1:nrow(preddt))
+    # {
+    #   if(preddt[l,1]>preddt[l,2])
+    #     preddt[l,3]=0
+    #   else
+    #     preddt[l,3]=1
+    # }
+  #pred<-as.logical(pred)
+  # test$Top10<-as.logical(test$Top10)
+  # preddt<-as.logical(preddt)
+  test1<-cbind(test$Top10,preddt)
+  test2<-as.data.frame(test1)
+  test2$V1<-as.integer(test2$V1)
+  test2$preddt<-as.integer(test2$preddt)
+  #print(test1)
+  # predobj[i]<-prediction(test$pred,test$Top10)
+  # prefobj[i] <- performance(predobj[[i]],"tpr","fpr")
+   aucvec[i]<-auc(test2$V1,test2$preddt)
+  count<-0
+for(k in 1:nrow(test1))
+{
+  if(test1[k,1]==test1[k,2])
+    count<-count+1
+}
+acc[i]<-count/nrow(test1)
+err[i]<-1-acc[i]
+testfold[i]<-i
+}
+retval<-data.frame(testfold,acc,err,aucvec)
+return(retval)
+}
+```
+
+```{r}
+kone<-knnfun(knn=1)
+kthree<-knnfun(knn=3)
+kfive<-knnfun(knn=5)
+kseven<-knnfun(knn=7)
+knine<-knnfun(knn=9)
+print(kone)
+print(kthree)
+print(kfive)
+print(kseven)
+print(knine)
+
+```
+
+
+#Q8d
+```{r}
+# decisiontree<-function()
+# {
+  library(pROC)
+  library(class)
+library(rpart)
+library(rpart.plot)
+  library(ROCR)
+  predobj<-lapply( rep("prediction", 10), new )
+  prefobj<-lapply( rep("performance", 10), new )
+  testfold<-vector(length = 10)
+  aucvec<-vector(length = 10)
+  acc<-vector(length = 10)
+  err<-vector(length = 10)
+  for(i in 1:10)
+  {
+    train<-as.data.frame(NULL)
+    for(j in 1:10)
+    {
+      if(j!=i)
+      {    train<-rbind(train,folds[[j]])}
+      
+    }
+    test<-folds[[i]]
+    fit<-rpart(Top10 ~ .,method = "class",data = train)
+    
+    rpart.plot(fit)
+    pred<-predict(fit,test,method="class")
+    preddt<-as.data.frame(pred)
+    for(l in 1:nrow(preddt))
+    {
+      if(preddt[l,1]>preddt[l,2])
+        preddt[l,3]=0
+      else
+        preddt[l,3]=1
+    }
+    #pred<-knn(train,test,k=knn,cl=train$Top10)
+    #pred<-as.integer(pred)
+    test<-cbind(test,preddt$V3)
+    #predobj[i]<-prediction(test$pred,test$Top10)
+    #prefobj[i] <- performance(predobj[[i]],"tpr","fpr")
+    aucvec[i]<-auc(test$`preddt$V3`,test$Top10)
+    count<-0
+    for(k in 1:nrow(test))
+    {
+      if(test$Top10[k]==test$`preddt$V3`[k])
+        count<-count+1
+    }
+    acc[i]<-count/nrow(test)
+    err[i]<-1-acc[i]
+    testfold[i]<-i
+  }
+  retval<-data.frame(testfold,acc,err,aucvec)
+  print(retval)
+```
+When we use seventh fold as the test data, we get the highest accuracy
+
+```{r}
+#   return(retval)
+# }
+trainbest<-as.data.frame(NULL)
+    for(j in 1:10)
+    {
+      if(j!=7)
+      {    trainbest<-rbind(trainbest,folds[[j]])}
+      
+    }
+testbest<-folds[[7]]
+fit<-rpart(Top10 ~ .,method = "class",data = trainbest)
+rpart.plot(fit,main="Unpruned Classification Tree")
+printcp(fit)
+#ptree<- prune(fit,cp= fit$cptable[which.min(fit$cptable[,"xerror"]),"CP"])
+ptree2<-prune(fit,cp=0.014)
+rpart.plot(ptree2, uniform=TRUE,main="Pruned Classification Tree with cp=0.014 ")
+ptree3<-prune(fit,cp=0.010000)
+rpart.plot(ptree1, uniform=TRUE,main="Pruned Classification Tree with cp=0.010000")
+
+#a<-decisiontree()
+#n<-a[with(a, order(a$acc)), ]
+
+#sort(a$acc)
+```
+
+#Q8e
+```{r}
+  library(pROC)
+# set.seed(123)
+# s<-sample(7574,6059)
+# traine<-q3sub[s,]
+# teste<-q3sub[-s,]
+traine<-rbind(folds[[1]],folds[[10]],folds[[3]],folds[[4]],folds[[5]],folds[[6]],folds[[7]],folds[[8]],folds[[9]])
+traine$Top10<-as.logical(traine$Top10)
+teste<-folds[[2]]
+teste$Top10<-as.logical(teste$Top10)
+library("naivebayes")
+model<-naive_bayes(Top10 ~ .,data=traine)
+prede<-predict(model,teste)
+prede<-as.logical(prede)
+testclss<-cbind(teste$Top10,prede)
+
+    count<-0
+    for(k in 1:nrow(testclss))
+    {
+      if(testclss[k,1]==testclss[k,2])
+        count<-count+1
+    }
+    print(count)
+    acc<-count/nrow(testclss)
+    err<-1-acc
+    testclss[,1]<-as.numeric(testclss[,1])
+    testclss[,2]<-as.numeric(testclss[,2])
+   auc<-auc(testclss[,1],testclss[,2])  
+    print(paste0("accuracy: ",acc))
+    print(paste0("Error rate: ",err))
+    print(paste0("AUC: ",auc))
+    
+```
+
+
+#Q8h
+
+Number of negative samples should be considered as they have an effect on classification. These samples influence the performance of the classifiers. More the number of negative samples, more is the precision, given that the number of positive samples is constant. The effect of more number of negative samples increases the performance for most classifiers. 

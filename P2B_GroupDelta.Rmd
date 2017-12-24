@@ -1,0 +1,276 @@
+---
+title: "Project 2 part-B"
+author: "Shravan Kumar"
+date: "February 17, 2017"
+output: html_document
+---
+#Q7-a College data clustering
+```{r}
+# install.packages("cluster")
+# install.packages("dendextend")
+library(cluster)
+library(dendextend)
+college <- read.csv("college_data.csv")
+college[,4:21] <- 
+  lapply(college[,4:21,drop=FALSE],as.numeric)
+str(college)
+
+#standardizing the data
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+college2<-as.data.frame(lapply(college[4:21],normalize))
+college3<-as.matrix(college2)
+#Q1a
+college6<-agnes(college3,diss=inherits(college3,"dist"),metric="euclidean",stand=FALSE,method="complete",par.method,trace.lev=0,keep.diss=TRUE)
+plot(college6,which.plot=2,labels=college$ShortHandName)
+```
+
+#Q7-b
+```{r}
+college <- read.csv("college_data.csv")
+coll<-college[-which(college$ShortHandName=='CSU-Chico'|college$ShortHandName=='Columbia'|college$ShortHandName=='Northwestern'|college$ShortHandName=='SFSU'|college$ShortHandName=='Berkeley'|college$ShortHandName=='UCDavis'|college$ShortHandName=='UCSB '|college$ShortHandName=='WPI'),]
+coll[,4:21] <- 
+  lapply(coll[,4:21,drop=FALSE],as.numeric)
+
+#standardizing the data
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+college2<-as.data.frame(lapply(coll[4:21],normalize))
+college3<-as.matrix(college2)
+college4b<-agnes(college3,diss=inherits(college3,"dist"),metric="euclidean",stand=FALSE,method="complete",par.method,trace.lev=0,keep.diss=TRUE)
+
+
+college4c<-agnes(college3,diss=inherits(college3,"dist"),metric="euclidean",stand=FALSE,method="average",par.method,trace.lev=0,keep.diss=TRUE)
+plot(college4b,which.plot=2,labels=college2$ShortHandName)
+plot(college4c,which.plot=2,labels=college2$ShortHandName)
+```
+
+#Q7-c
+```{r}
+college <- read.csv("college_data.csv")
+coll<-college[-which(college$ShortHandName=='CSU-Chico'|college$ShortHandName=='Columbia'|college$ShortHandName=='Northwestern'|college$ShortHandName=='SFSU'|college$ShortHandName=='Berkeley'|college$ShortHandName=='UCDavis'|college$ShortHandName=='UCSB '|college$ShortHandName=='WPI'),]
+coll[,4:21] <- 
+  lapply(coll[,4:21,drop=FALSE],as.numeric)
+
+#standardizing the data
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+college2<-as.data.frame(lapply(coll[4:21],normalize))
+college3<-as.matrix(college2)
+hc.single=hclust(dist(college3),method='single')
+plot(hc.single,label=coll$ShortHandName)
+cutree(hc.single,k = 3)
+```
+
+#Q7-d 
+```{r}
+college <- read.csv("college_data.csv")
+college[,4:21] <- 
+  lapply(college[,4:21,drop=FALSE],as.numeric)
+
+a<-data.frame(college[,4:21])
+
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+college2<-as.data.frame(lapply(a,normalize))
+college3<-as.matrix(college2)
+prcomp(college3)
+ba<-prcomp(college3)
+summary(ba)
+x<-ba[[5]]
+v<-college$Institution.Name
+m<-cbind.data.frame(v,x[,1],x[,2])
+typeof(m)
+class(m)
+#v1<-colors(1:21)
+library(ggplot2)
+ggplot(as.data.frame(m), aes(x=x[, 1],y=x[, 2]))+geom_point(colour="white", shape=21, size = 4,aes(fill = factor(v)))+theme(legend.position="bottom")
+
+
+```
+
+#Q7-e
+```{r}
+library(cluster)
+library(dendextend)
+college <- read.csv("college_data.csv")
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+a<-data.frame(college[,4:21])
+college2<-as.data.frame(lapply(a,normalize))
+college3<-as.matrix(college2)
+collegecluster<-kmeans(college3,3)
+table(collegecluster$cluster,college$Institution.Name) 
+kmeans(college3,3)
+cluster<-kmeans(college3,3)
+collegecluster$cluster <- as.factor(cluster$cluster)
+```
+
+K-means changes every time its run on a dataset because we assume the centroids as a random point and depending on the time the cluster generates.
+
+Hierarchial remains the same.
+
+
+#Q7-f
+```{r}
+
+college = read.csv("college_desc.csv")
+a<-data.frame(college[,4:21])
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+college2<-as.data.frame(lapply(a,normalize))
+
+#Pass DF, Number of Clusters
+pam.result <- pam(college2,3)
+pam.result$clustering
+summary(pam.result)
+# a<-data.frame(college[,4:21])
+# college2<-as.data.frame(lapply(a,normalize))
+# college3<-as.matrix(college2)
+
+
+
+pam.result <- pam(college2,k=3,diss=FALSE,metric="manhattan")
+pam.result$clustering
+summary(pam.result)
+```
+One of the cluster which contains CMU,MIT, stanford is same for both hierarchial and K-medoids and different for other  two clusters.
+
+
+#Q8
+```{r}
+#Reading the data
+music2 = read.csv("music2.csv")  # read data set
+#subsetting numerical data
+df = subset(music2, select=c(LVar,LAve,LMax,LFEner,LFreq) )
+#df
+
+#normalizing the data
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+dfNormZ <- as.data.frame(normalize(df))
+
+
+#dfNormZ
+
+#complete linkage
+hc.complete=hclust(dist(dfNormZ),method='complete')
+
+#plotting complete linkage by Type
+plot(hc.complete,  main='Hierarchial clustering-Complete by type',labels=music2$Type)
+
+#plotting complete linkage by Artist
+plot(hc.complete,  main='Hierarchial clustering-Complete by artist',labels=music2$Artist)
+#======================================================================
+#single linkage
+hc.single=hclust(dist(dfNormZ),method='single')
+
+#plotting single linkage by Type
+plot(hc.single,  main='Hierarchial clustering-Single by type',labels=music2$Type)
+
+#plotting single linkage by Artist
+plot(hc.single,  main='Hierarchial clustering-Single by artist',labels=music2$Artist)
+
+
+
+```
+The clustering by music type is better.
+
+
+
+
+#Q9
+```{r}
+#reading data into one column
+H114<-read.csv("H114.ord",header=F)
+#reading data into 9 columns
+v1<-vector('numeric')
+v2<-vector('numeric')
+v3<-vector('numeric')
+v4<-vector('numeric')
+v5<-vector('numeric')
+v6<-vector('numeric')
+v7<-vector('numeric')
+v8<-vector('numeric')
+v9<-vector('numeric')
+H<-data.frame(v1,v2,v3,v4,v5,v6,v7,v8,v9)
+colnames(H114)<-c("blah")
+for(i in 1:nrow(H114))
+{
+n<-nchar(as.character(H114$blah[i]))
+#First five votes ignored as reading started from 42
+v<-substring(H114$blah[i],first = c(1,4,9,11,13,21,24,26,42),last = c(3,8,10,12,20,23,25,36,1363))
+for(j in 1:length(v))
+{
+H[i,j]<-v[j]
+}
+}
+
+
+#reading data in 1363 columns
+m<-H$v9
+ha <- data.frame(matrix(NA, nrow=1, ncol=1363))
+ha<-ha[-1,]
+for(i in 1:length(m))
+{
+n<-nchar(as.character(m[i]))
+v<-substring(m[i],first=c(1:n),last=c(1:n))
+for(j in 1:length(v))
+{
+ha[i,j]<-v[j]
+}
+}
+ #y <- as.data.frame(matrix(NA, nrow=441, ncol=20))
+
+rand<-sample(ncol(ha),100)
+y <- ha[,rand]
+ 
+#y <- cbind.data.frame(ha$X9,ha$X11,ha$X26,ha$X56,ha$X69,ha$X198,ha$X232,ha$X365,ha$X590,ha$X625,ha$X698,ha$X777,ha$X851,ha$X920,ha$X1009,ha$X1179,ha$X1265,ha$X1291,ha$X1300,ha$X1311)
+ 
+
+y<-as.integer(unlist(y))
+x<-matrix(y,nrow=441,ncol=20)
+
+
+pc<-prcomp(x)
+sub<-pc[[5]]
+pc1<-sub[,1]
+pc2<-sub[,2]
+#p<-head(H,440)
+pp1<-cbind(H$v6,pc1,pc2)
+
+library(ggplot2)
+ggplot(as.data.frame(pp1), aes(x=pc1,y=pc2))+geom_point(colour="white", shape=21, size = 2,aes(fill = factor(H$v6)))+scale_fill_manual(values=c("blue", "red"))+ theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+theme(axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())
+
+#100 votes
+ran<-sample(ncol(ha),100)
+newdata <- ha[,ran]
+y1<-as.integer(unlist(newdata))
+x1<-matrix(y1,nrow=441,ncol=100)
+x1[is.na(x1)] <- 0
+pc1<-prcomp(x1)
+sub1<-pc1[[5]]
+pc11<-sub1[,1]
+pc21<-sub1[,2]
+#p<-head(H,440)
+pp2<-cbind(H$v6,pc11,pc21)
+
+library(ggplot2)
+ggplot(as.data.frame(pp2), aes(x=pc11,y=pc21))+geom_point(colour="white", shape=21, size = 2,aes(fill = factor(V1)))+scale_fill_manual(values=c("blue", "red"))+ theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+theme(axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())
+```

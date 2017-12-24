@@ -1,0 +1,934 @@
+---
+title: "q3p4"
+output: html_document
+---
+```{r}
+#install.packages("caret")
+library(caret)
+#install.packages("e1071")
+library("e1071")
+```
+
+#8a
+```{r}
+library('randomForest')
+library("caret")
+#install.packages("caret")
+q3<-read.csv("music.csv",header = T)
+q3sub<-q3[,c(-2,-3,-4,-5)]
+```
+
+#8b
+```{r}
+q3c0<-q3sub[which(q3$Top10==0),]
+q3c1<-q3sub[which(q3$Top10==1),]
+nrow(q3c0)
+nrow(q3c1)
+```
+ we can have 6455 top10 value =0 and 1119 top10 value= 1
+9 folds with 757 rows(112 top10=1 ,645 top10=0) each and 10th fold will have 761 rows(111 top10=1 ,650 top10=0)
+
+```{r}
+l<-1
+r<-645
+folds<-list()
+for(i in 1:9)
+{
+  folds[[i]]<-q3c0[l:r,]
+  l<-l+645
+  r<-r+645
+}
+folds[[10]]<-q3c0[l:nrow(q3c0),]
+l<-1
+r<-112
+for(i in 1:9)
+{
+  folds[[i]]<-rbind(folds[[i]],q3c1[l:r,])
+  l<-l+112
+  r<-r+112
+}
+folds[[10]]<-rbind(folds[[10]],q3c1[l:nrow(q3c1),])
+```
+
+```{r}
+# install.packages("pROC")
+# install.packages("randomForest")
+# install.packages("class")
+# install.packages("ROCR")
+```
+#8f
+```{r}
+library(pROC)
+  library(class)
+library(rpart)
+  library(ROCR)
+# predobj<-lapply(rep("prediction",10), new)
+#   predobj<-lapply( rep("prediction", 10), new )
+testfold<-vector(length = 10)
+  aucvec<-vector(length = 10)
+  acc<-vector(length = 10)
+  err<-vector(length = 10)
+  for(i in 1:10)
+  {
+    train<-as.data.frame(NULL)
+    for(j in 1:10)
+    {
+      if(j!=i)
+      {    train<-rbind(train,folds[[j]])}
+      
+    }
+    test<-folds[[i]]
+train$Top10<-as.character(train$Top10)
+train$Top10<-as.factor(train$Top10)
+    fit<-randomForest(Top10 ~ .,train)
+    
+    pred_rf<-predict(fit,test[,-35],method="class")
+    pred_rf<-as.vector(pred_rf)
+    test<-cbind(test,pred_rf)
+    aucvec[i]<-auc(pred_rf,test$Top10)
+    count<-0
+    for(k in 1:nrow(test))
+    {
+      if(test$Top10[k]==pred_rf[k])
+        count<-count+1
+    }
+    acc[i]<-count/nrow(test)
+    err[i]<-1-acc[i]
+    testfold[i]<-i
+  }
+  retval<-data.frame(testfold,acc,err,aucvec)
+  print(retval)
+
+```
+
+#8g
+```{r}
+library("e1071") 
+p4_svm<-function(c)
+{
+  testfold<-vector(length = 10)
+  aucvec<-vector(length = 10)
+  acc<-vector(length = 10)
+  err<-vector(length = 10)
+  for(i in 1:10)
+  {
+    train<-as.data.frame(NULL)
+    for(j in 1:10)
+    {
+      if(j!=i)
+      {    train<-rbind(train,folds[[j]])}
+      
+    }
+    test<-folds[[i]]
+    fit = svm(Top10 ~ ., train, kernel='radial', cost=c,type="C-classification")
+pred_svm<-predict(fit,test[,-35])
+pred_svm<-as.vector(pred_svm)
+pred_svm<-as.integer(pred_svm)
+    test<-cbind(test,pred_svm)
+    #
+    pd<-as.numeric(pred_svm)
+    predK = prediction(as.numeric(pd),test$Top10)
+aucK = performance(predK, "auc")
+aucvec[i] = as.numeric(aucK@y.values)
+    #
+    
+    #aucvec[i]<-auc(pred_svm,test$Top10)
+    count<-0
+    for(k in 1:nrow(test))
+    {
+      if(test$Top10[k]==pred_svm[k])
+        count<-count+1
+    }
+    acc[i]<-count/nrow(test)
+    err[i]<-1-acc[i]
+    testfold[i]<-i
+  }
+  retval<-data.frame(testfold,acc,err,aucvec)
+  print(retval)
+
+  
+}
+print("Svm with cost 0.01\n")
+p4_svm(c=0.01)
+print("Svm with cost 0.1\n")
+p4_svm(c=0.1)
+print("Svm with cost 1\n")
+p4_svm(c=1)
+print("Svm with cost 10\n")
+p4_svm(c=10)
+print("Svm with cost 100\n")
+p4_svm(c=100)
+
+```
+
+
+---
+title: "SpamClassification"
+author: "Shravan Kumar Bittla   Sameena Thabbasum Satish Penumarthi"
+date: "April 11, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+#Q1a
+```{r}
+## (a) Loading the data
+spam=read.csv("spam.csv")
+spam2<-spam[, !(colnames(spam) %in% c("isuid","id","domain", "spampct","category","cappct"))]
+```
+
+#Q1b
+```{r}
+## (b) Splitting the data into Train and Test
+dt= sort(sample(nrow(spam), nrow(spam)*0.8))
+train_spam<-spam2[dt,]
+test_spam<-spam2[-dt,]
+```
+
+#Q1c
+```{r}
+## (c) Naive Bayes Classifier
+##model fitting
+library(e1071)
+nb=naiveBayes(spam~.,data=train_spam)
+print(nb)
+
+## Testing on Dataset
+
+nbprediction<-predict(nb, test_spam)
+Confusion<-table(nbprediction,test_spam$spam)
+
+##Accuracy,Error 
+accuracy<-sum(diag(Confusion))/sum(Confusion)
+print(accuracy)
+error<-1-accuracy
+print(error)
+#AUC
+library(pROC)
+PredN<-predict(nb,test_spam, type='class')
+PredN2<-as.numeric(PredN)
+auc_NaiveBayes<-auc(test_spam$spam,PredN2)
+print(auc_NaiveBayes)
+```
+
+#Q1d
+```{r}
+## (d) Decision Tree
+library(rpart)
+library(caTools)
+##Fitting the Model
+DecisionTree <- rpart(spam~.,data=train_spam)
+plot(DecisionTree)
+text(DecisionTree,pretty=0)
+summary(DecisionTree)
+##Predictions
+PredictionsD<-predict(DecisionTree,test_spam,type='class')
+td<-table(predictions=PredictionsD,actual=test_spam$spam)
+print(td)
+##Accuracy
+ACC<-sum(diag(td))/sum(td)
+print(ACC)
+ERRORD<-(1-ACC)
+print(ERRORD)
+##AUC metric
+PredictionsD2<-predict(DecisionTree,test_spam,type='prob')
+auc2<-auc(test_spam$spam,PredictionsD2[,2])
+print(auc2)
+```
+
+#Q1e
+```{r}
+##(e)Random Forest
+##Fitting the Model
+library(MASS)
+library(randomForest)
+rmodel = randomForest(spam ~., data = train_spam)
+rmodel
+#model on  Test data
+rpred <- predict(rmodel,test_spam,type='class')
+tr<-table(rpred, test_spam$spam)
+##Accuracy metric
+accuracy<-sum(diag(tr))/sum(tr)
+print(accuracy)
+error<-1-accuracy
+print(error)
+##AUC
+library(pROC)
+Predprobs<-predict(rmodel,test_spam, type='prob')
+aucr<-auc(test_spam$spam,Predprobs[,2])
+print(aucr)
+```
+
+#Q1f
+```{r}
+##SVM
+
+##Fitting the Model
+
+library(e1071)
+svmfit <- svm(spam~., data=train_spam,kernel="radial")
+print(svmfit)
+##Tuning the Model
+tuned <- tune(svm,spam~., data =train_spam, kernel="radial", ranges = list(cost=c(0.01,0.1,1,10,100)))
+summary(tuned)
+
+## Best Paramters are Cost=10
+svmfit2<- svm(spam~., data=train_spam,kernel="radial",cost=10)
+svmpred<-predict(svmfit2,test_spam[,-15])
+tsvm<-table(pred=svmpred,true=test_spam[,15])
+
+##Accuracy metric
+accursvm<-sum(diag(tsvm))/sum(tsvm)
+print(accursvm)
+error<-1-accursvm
+#error rate
+print(error)
+
+library(pROC)
+svmpred2<-predict(svmfit2,test_spam,type='class')
+svmpred3<-as.numeric(svmpred2)
+auc<-auc(test_spam$spam,svmpred3)
+
+#Area Under curve
+print(auc)
+```
+
+#Q1g
+```{r}
+## Ensemble predictor
+models = NULL
+models = as.data.frame(models)
+print(svmpred3)
+
+is.vector(PredN)
+PredN<-as.vector(PredN)
+PredictionsD<-as.vector(PredictionsD)
+rpred<-as.vector(rpred)
+svmpred2<-as.vector(svmpred2)
+models<-cbind(PredN,PredictionsD,rpred,svmpred2)
+models<-as.data.frame(models)
+print(models)
+predicte = apply(models,1,function(x) names(which.max(table(x))))
+models$majority = predicte
+models
+```
+
+#Q1h
+```{r}
+## (h)Bagging
+##Fitting the Model
+
+library(adabag)
+bagg<-bagging(spam~.,data=spam2)
+
+#bagging (creating the model)
+
+baggmod = bagging(spam~., data = train_spam, mfinal = 100)
+summary(baggmod)
+#predicting the model on testing dataset.
+predbag = predict.bagging(baggmod, newdata = test_spam[-15])
+
+tbag<-table(predbag$class,test_spam[,15])
+print(tbag)
+##Accuracy metric
+accurtbag<-sum(diag(tbag)/sum(tbag))
+print(accurtbag)
+error<-1-(accurtbag)
+#error rate
+print(error)
+
+```
+
+#Q1i
+```{r}
+##Boosting
+library(rpart)
+library(adabag)
+boostmod = boosting(spam~., data = train_spam, mfinal = 100)
+summary(boostmod)
+
+#predicting the model on testing dataset.
+boostpredict = predict.boosting(boostmod, newdata = test_spam[-15])
+boostpredict
+tboost<-table(boostpredict$class,test_spam[,15])
+print(tboost)
+##Accuracy metric
+accurtboost<-sum(diag(tboost)/sum(tboost))
+print(accurtboost)
+error<-1-(accurtboost)
+#error rate
+print(error)
+
+
+```
+
+
+
+#q2a
+```{r}
+fruit = read.table("fruit.txt",sep = ",", header = FALSE)
+set.seed(4821)
+ran<-sample(1:54,40)
+colnm<-c("type","weight","height","width")
+colnames(fruit)<-colnm
+train<-fruit[ran,]
+test<-fruit[-ran,]
+#weight
+```
+
+#q2b
+```{r}
+pw0apple<-nrow(train[which(train$weight==0&train$type==1),])/nrow(train[which(train$type==1),])
+pw1apple<-nrow(train[which(train$weight==1&train$type==1),])/nrow(train[which(train$type==1),])
+pw0orange<-nrow(train[which(train$weight==0&train$type==2),])/nrow(train[which(train$type==2),])
+pw1orange<-nrow(train[which(train$weight==1&train$type==2),])/nrow(train[which(train$type==2),])
+pw0lemon<-nrow(train[which(train$weight==0&train$type==3),])/nrow(train[which(train$type==3),])
+pw1lemon<-nrow(train[which(train$weight==1&train$type==3),])/nrow(train[which(train$type==3),])
+#smoothing for weight
+pw0apple<-(nrow(train[which(train$weight==0&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$weight)))
+pw1apple<-(nrow(train[which(train$weight==1&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$weight)))
+pw0orange<-(nrow(train[which(train$weight==0&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$weight)))
+pw1orange<-(nrow(train[which(train$weight==1&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$weight)))
+pw0lemon<-(nrow(train[which(train$weight==0&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$weight)))
+pw1lemon<-(nrow(train[which(train$weight==1&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$weight)))
+
+applew<-c(pw0apple,pw1apple)
+orangew<-c(pw0orange,pw1orange)
+lemonw<-c(pw0lemon,pw1lemon)
+probweight<-rbind(applew,orangew,lemonw)
+
+#height
+ph1apple<-nrow(train[which(train$height==1&train$type==1),])/nrow(train[which(train$type==1),])
+ph1orange<-nrow(train[which(train$height==1&train$type==2),])/nrow(train[which(train$type==2),])
+ph1lemon<-nrow(train[which(train$height==1&train$type==3),])/nrow(train[which(train$type==3),])
+ph0apple<-nrow(train[which(train$height==0&train$type==1),])/nrow(train[which(train$type==1),])
+ph0orange<-nrow(train[which(train$height==0&train$type==2),])/nrow(train[which(train$type==2),])
+ph0lemon<-nrow(train[which(train$height==0&train$type==3),])/nrow(train[which(train$type==3),])
+ph2apple<-nrow(train[which(train$height==2&train$type==1),])/nrow(train[which(train$type==1),])
+ph2orange<-nrow(train[which(train$height==2&train$type==2),])/nrow(train[which(train$type==2),])
+ph2lemon<-nrow(train[which(train$height==2&train$type==3),])/nrow(train[which(train$type==3),])
+
+#height with smoothing
+ph1apple<-(nrow(train[which(train$height==1&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$height)))
+ph1orange<-(nrow(train[which(train$height==1&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$height)))
+ph1lemon<-(nrow(train[which(train$height==1&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$height)))
+ph0apple<-(nrow(train[which(train$height==0&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$height)))
+ph0orange<-(nrow(train[which(train$height==0&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$height)))
+ph0lemon<-(nrow(train[which(train$height==0&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$height)))
+ph2apple<-(nrow(train[which(train$height==2&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$height)))
+ph2orange<-(nrow(train[which(train$height==2&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$height)))
+ph2lemon<-(nrow(train[which(train$height==2&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$height)))
+
+appleh<-c(ph0apple,ph1apple,ph2apple)
+orangeh<-c(ph0orange,ph1orange,ph2orange)
+lemonh<-c(ph0lemon,ph1lemon,ph2lemon)
+probheight<-rbind(appleh,orangeh,lemonh)
+
+
+
+#width
+pwd1apple<-nrow(train[which(train$width==1&train$type==1),])/nrow(train[which(train$type==1),])
+pwd1orange<-nrow(train[which(train$width==1&train$type==2),])/nrow(train[which(train$type==2),])
+pwd1lemon<-nrow(train[which(train$width==1&train$type==3),])/nrow(train[which(train$type==3),])
+pwd0apple<-nrow(train[which(train$width==0&train$type==1),])/nrow(train[which(train$type==1),])
+pwd0orange<-nrow(train[which(train$width==0&train$type==2),])/nrow(train[which(train$type==2),])
+pwd0lemon<-nrow(train[which(train$width==0&train$type==3),])/nrow(train[which(train$type==3),])
+pwd2apple<-nrow(train[which(train$width==2&train$type==1),])/nrow(train[which(train$type==1),])
+pwd2orange<-nrow(train[which(train$width==2&train$type==2),])/nrow(train[which(train$type==2),])
+pwd2lemon<-nrow(train[which(train$width==2&train$type==3),])/nrow(train[which(train$type==3),])
+#smotthing for width
+pwd1apple<-(nrow(train[which(train$width==1&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$width)))
+pwd1orange<-(nrow(train[which(train$width==1&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$width)))
+pwd1lemon<-(nrow(train[which(train$width==1&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$width)))
+pwd0apple<-(nrow(train[which(train$width==0&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$width)))
+pwd0orange<-(nrow(train[which(train$width==0&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$width)))
+pwd0lemon<-(nrow(train[which(train$width==0&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$width)))
+pwd2apple<-(nrow(train[which(train$width==2&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$width)))
+pwd2orange<-(nrow(train[which(train$width==2&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$width)))
+pwd2lemon<-(nrow(train[which(train$width==2&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$width)))
+
+applewd<-c(pwd0apple,pwd1apple,pwd2apple)
+orangewd<-c(pwd0orange,pwd1orange,pwd2orange)
+lemonwd<-c(pwd0lemon,pwd1lemon,pwd2lemon)
+probwidth<-rbind(applewd,orangewd,lemonwd)
+print("probabilities of weight over different fruit class")
+print(probweight)
+print("probabilities of height over different fruit class")
+print(probheight)
+print("probabilities of width over different fruit class")
+print(probwidth)
+```
+
+
+#q3c
+```{r}
+
+pa<-nrow(train[which(train$type==1),])/length(train$type)
+po<-nrow(train[which(train$type==2),])/length(train$type)
+pl<-nrow(train[which(train$type==3),])/length(train$type)
+nvbayes<-function(test)
+{
+  clss<-vector(length = nrow(test))
+  for(i in 1:nrow(test))
+  {
+    
+    if(test[i,2]==0)
+    {
+      papple<-probweight[1,1]
+      porange<-probweight[2,1]
+      plemon<-probweight[3,1]
+      if(test[i,3]==0)
+      {
+        papple<-papple*probheight[1,1]
+        porange<-porange*probheight[2,1]
+        plemon<-plemon*probheight[3,1]
+      }
+      else if(test[i,3]==1)
+      {
+        papple<-papple*probheight[1,2]
+        porange<-porange*probheight[2,2]
+        plemon<-plemon*probheight[3,2] 
+      }
+      else
+      {
+        papple<-papple*probheight[1,3]
+        porange<-porange*probheight[2,3]
+        plemon<-plemon*probheight[3,3] 
+      }
+      if(test[i,4]==0)
+      {
+        papple<-papple*probwidth[1,1]
+        porange<-porange*probwidth[2,1]
+        plemon<-plemon*probwidth[3,1]
+      }
+      else if(test[i,4]==1)
+      {
+        papple<-papple*probwidth[1,2]
+        porange<-porange*probwidth[2,2]
+        plemon<-plemon*probwidth[3,2] 
+      }
+      else
+      {
+        papple<-papple*probwidth[1,3]
+        porange<-porange*probwidth[2,3]
+        plemon<-plemon*probwidth[3,3] 
+      }
+    }
+    else
+      {
+        papple<-probweight[1,2]
+        porange<-probweight[2,2]
+        plemon<-probweight[3,2]
+        if(test[i,3]==0)
+        {
+          papple<-papple*probheight[1,1]
+          porange<-porange*probheight[2,1]
+          plemon<-plemon*probheight[3,1]
+        }
+        else if(test[i,3]==1)
+        {
+          papple<-papple*probheight[1,2]
+          porange<-porange*probheight[2,2]
+          plemon<-plemon*probheight[3,2] 
+        }
+        else
+        {
+          papple<-papple*probheight[1,3]
+          porange<-porange*probheight[2,3]
+          plemon<-plemon*probheight[3,3] 
+        }
+        if(test[i,4]==0)
+        {
+          papple<-papple*probwidth[1,1]
+          porange<-porange*probwidth[2,1]
+          plemon<-plemon*probwidth[3,1]
+        }
+        else if(test[i,4]==1)
+        {
+          papple<-papple*probwidth[1,2]
+          porange<-porange*probwidth[2,2]
+          plemon<-plemon*probwidth[3,2] 
+        }
+        else
+        {
+          papple<-papple*probwidth[1,3]
+          porange<-porange*probwidth[2,3]
+          plemon<-plemon*probwidth[3,3] 
+        }
+      }
+    
+    papple<-papple*pa
+    porange<-porange*po
+    plemon<-plemon*pl
+    
+    if((papple>plemon)&(papple>porange))
+    {
+      clss[i]<-1
+    }
+    
+      else
+      {
+        if(porange>plemon)
+          clss[i]<-2
+        else
+          clss[i]<-3
+      }
+  }
+  return(clss)
+}
+```
+
+```{r}
+clssq2<-nvbayes(test)
+testu<-cbind(test$type,clssq2)
+cf<-confusionMatrix(test$type,clssq2)
+print(testu)
+print(cf)
+```
+
+
+#q2d
+```{r}
+train_data2 <- train
+test_data2 <- test
+nb.model <- naiveBayes(train_data2[,-1], train_data2[,1],laplace = 1)
+print(nb.model)
+nb.train.fit = predict(nb.model, train_data2[,-1], type='raw')
+nb.test.fit = predict(nb.model, test_data2[,-1], type='raw')
+clss_builtin<-vector(length = 14)
+for(i in 1:14)
+{
+if(nb.test.fit[i,1]>nb.test.fit[i,2])
+  clss_builtin[i]<-1
+else
+{
+if(nb.test.fit[i,2]>nb.test.fit[i,3])
+  clss_builtin[i]<-2
+else
+  clss_builtin[i]<-3
+}
+
+}
+
+q2d<-cbind(clss_builtin,clssq2,test$type)
+colnss<-c("builtin predictions","hard coded predictions","true class")
+colnames(q2d)<-colnss
+print(q2d)
+```
+
+#q2e
+```{r}
+library(caret)
+acc<-vector(length = 10)
+sens<-matrix(nrow=10,ncol=3)
+spec<-matrix(nrow=10,ncol=3)
+
+
+for(i in 1:10)
+{
+  ran<-sample(1:54,40)
+colnm<-c("type","weight","height","width")
+colnames(fruit)<-colnm
+train<-fruit[ran,]
+test<-fruit[-ran,]
+unique(fruit$type)
+unique(fruit$weight)
+unique(fruit$height)
+unique(fruit$width)
+#weight
+pw0apple<-nrow(train[which(train$weight==0&train$type==1),])/nrow(train[which(train$type==1),])
+pw1apple<-nrow(train[which(train$weight==1&train$type==1),])/nrow(train[which(train$type==1),])
+pw0orange<-nrow(train[which(train$weight==0&train$type==2),])/nrow(train[which(train$type==2),])
+pw1orange<-nrow(train[which(train$weight==1&train$type==2),])/nrow(train[which(train$type==2),])
+pw0lemon<-nrow(train[which(train$weight==0&train$type==3),])/nrow(train[which(train$type==3),])
+pw1lemon<-nrow(train[which(train$weight==1&train$type==3),])/nrow(train[which(train$type==3),])
+#smoothing for weight
+pw0apple<-(nrow(train[which(train$weight==0&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$weight)))
+pw1apple<-(nrow(train[which(train$weight==1&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$weight)))
+pw0orange<-(nrow(train[which(train$weight==0&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$weight)))
+pw1orange<-(nrow(train[which(train$weight==1&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$weight)))
+pw0lemon<-(nrow(train[which(train$weight==0&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$weight)))
+pw1lemon<-(nrow(train[which(train$weight==1&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$weight)))
+
+applew<-c(pw0apple,pw1apple)
+orangew<-c(pw0orange,pw1orange)
+lemonw<-c(pw0lemon,pw1lemon)
+probweight<-rbind(applew,orangew,lemonw)
+
+#height
+ph1apple<-nrow(train[which(train$height==1&train$type==1),])/nrow(train[which(train$type==1),])
+ph1orange<-nrow(train[which(train$height==1&train$type==2),])/nrow(train[which(train$type==2),])
+ph1lemon<-nrow(train[which(train$height==1&train$type==3),])/nrow(train[which(train$type==3),])
+ph0apple<-nrow(train[which(train$height==0&train$type==1),])/nrow(train[which(train$type==1),])
+ph0orange<-nrow(train[which(train$height==0&train$type==2),])/nrow(train[which(train$type==2),])
+ph0lemon<-nrow(train[which(train$height==0&train$type==3),])/nrow(train[which(train$type==3),])
+ph2apple<-nrow(train[which(train$height==2&train$type==1),])/nrow(train[which(train$type==1),])
+ph2orange<-nrow(train[which(train$height==2&train$type==2),])/nrow(train[which(train$type==2),])
+ph2lemon<-nrow(train[which(train$height==2&train$type==3),])/nrow(train[which(train$type==3),])
+
+#height with smoothing
+ph1apple<-(nrow(train[which(train$height==1&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$height)))
+ph1orange<-(nrow(train[which(train$height==1&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$height)))
+ph1lemon<-(nrow(train[which(train$height==1&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$height)))
+ph0apple<-(nrow(train[which(train$height==0&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$height)))
+ph0orange<-(nrow(train[which(train$height==0&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$height)))
+ph0lemon<-(nrow(train[which(train$height==0&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$height)))
+ph2apple<-(nrow(train[which(train$height==2&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$height)))
+ph2orange<-(nrow(train[which(train$height==2&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$height)))
+ph2lemon<-(nrow(train[which(train$height==2&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$height)))
+
+appleh<-c(ph0apple,ph1apple,ph2apple)
+orangeh<-c(ph0orange,ph1orange,ph2orange)
+lemonh<-c(ph0lemon,ph1lemon,ph2lemon)
+probheight<-rbind(appleh,orangeh,lemonh)
+
+
+
+#width
+pwd1apple<-nrow(train[which(train$width==1&train$type==1),])/nrow(train[which(train$type==1),])
+pwd1orange<-nrow(train[which(train$width==1&train$type==2),])/nrow(train[which(train$type==2),])
+pwd1lemon<-nrow(train[which(train$width==1&train$type==3),])/nrow(train[which(train$type==3),])
+pwd0apple<-nrow(train[which(train$width==0&train$type==1),])/nrow(train[which(train$type==1),])
+pwd0orange<-nrow(train[which(train$width==0&train$type==2),])/nrow(train[which(train$type==2),])
+pwd0lemon<-nrow(train[which(train$width==0&train$type==3),])/nrow(train[which(train$type==3),])
+pwd2apple<-nrow(train[which(train$width==2&train$type==1),])/nrow(train[which(train$type==1),])
+pwd2orange<-nrow(train[which(train$width==2&train$type==2),])/nrow(train[which(train$type==2),])
+pwd2lemon<-nrow(train[which(train$width==2&train$type==3),])/nrow(train[which(train$type==3),])
+#smotthing for width
+pwd1apple<-(nrow(train[which(train$width==1&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$width)))
+pwd1orange<-(nrow(train[which(train$width==1&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$width)))
+pwd1lemon<-(nrow(train[which(train$width==1&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$width)))
+pwd0apple<-(nrow(train[which(train$width==0&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$width)))
+pwd0orange<-(nrow(train[which(train$width==0&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$width)))
+pwd0lemon<-(nrow(train[which(train$width==0&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$width)))
+pwd2apple<-(nrow(train[which(train$width==2&train$type==1),])+1)/(nrow(train[which(train$type==1),])+length(unique(train$width)))
+pwd2orange<-(nrow(train[which(train$width==2&train$type==2),])+1)/(nrow(train[which(train$type==2),])+length(unique(train$width)))
+pwd2lemon<-(nrow(train[which(train$width==2&train$type==3),])+1)/(nrow(train[which(train$type==3),])+length(unique(train$width)))
+
+applewd<-c(pwd0apple,pwd1apple,pwd2apple)
+orangewd<-c(pwd0orange,pwd1orange,pwd2orange)
+lemonwd<-c(pwd0lemon,pwd1lemon,pwd2lemon)
+probwidth<-rbind(applewd,orangewd,lemonwd)
+
+
+clss_q2<-nvbayes(test)
+cfm1<-confusionMatrix(test$type,clss_q2)
+acc[i]<-cfm1$overall[1]
+sens[i,]<-cfm1$byClass[,1]
+spec[i,]<-cfm1$byClass[,2]
+}
+
+q2c<-cbind(acc,spec,sens)
+colnms<-c("accuracy","class1spec","class2spec","class3spec","class1sens","class2sens","class3sens")
+colnames(q2c)<-colnms
+print("accuracy,specificity,sensitivity of 10 75/25 splits \n")
+print(q2c)
+print("average of accuracy,specificity,sensitivity of 10 75/25 splits \n")
+averagematrix<-colMeans(q2c)
+print(averagematrix)
+```
+
+```{r}
+#install.packages("tm")
+#install.packages("gtools")
+library("gtools")
+library("tm")
+```
+
+#Q3a
+```{r}
+paff<-read.csv("party.txt",header = F)
+# x <- scan("party.txt", what = "string",sep = "\n") 
+# dat <- data.frame(x)
+```
+
+
+#Q3b
+```{r}
+library("tm")
+stpwrds<-read.csv("stopwords.txt")
+path<-"/home/campus16/sthabass/Downloads/datamining/sotu/sotu/files"
+#path<-"C:/Users/USER/Downloads/dm/p4/p4/files"
+cr<-Corpus(DirSource(directory = path ))
+cr_2<- tm_map(cr, removeWords, stopwords("english"))
+cr_2<- tm_map(cr,removeWords,stpwrds$a)
+```
+
+#Q3c(i)
+```{r}
+filenames<-list.files(path)
+length(filenames)
+library(gtools)
+filenams<-mixedsort(filenames)
+fileandclass<-cbind(paff,filenams)
+s.corps<-cr_2
+s.docmatrix<-TermDocumentMatrix(cr_2)
+mat<-as.matrix(s.docmatrix)
+```
+
+#Q3c(ii)
+```{r}
+dmat<-t(mat)
+dmatdt<-as.data.frame(dmat)
+dmatdt<-cbind(rownames(dmat),dmatdt)
+
+colnames(dmatdt)[which(names(dmatdt) == "rownames(dmat)")] <- "doc"
+colnames(fileandclass)[which(names(fileandclass)=="filenams")]<-"doc"
+#dfsorted<-dmatdt[mixedsort(dmatdt$doc),]
+#dfsorted<-dmatdt[mixedsort(dmatdt$doc),]
+fdt<-merge(x = fileandclass, y = dmatdt, by = "doc", all = TRUE)
+fdt<-fdt[which(fdt$V3>1829),]
+fdt<-fdt[-which(fdt$V1=='w'),]
+# fdt$V2<-as.character(fdt$V2)
+# which(fdt$V2==" obama")
+# which(fdt$V2==" bush"&fdt$V3==2006)
+test<-c(which(fdt$V2==" trump"&fdt$V3==2017),which(fdt$V2==" obama"&fdt$V3==2014),which(fdt$V2==" bush"&fdt$V3==2006),which(fdt$V2==" clinton"&fdt$V3==1995),which(fdt$V2==" kennedy"&fdt$V3==1962))
+test
+testdt<-fdt[test,]
+traindt<-fdt[-test,]
+trainsub<-traindt[,-c(1,3,4)]
+trainbin<-traindt
+testbin<-testdt
+# trainsum<-aggregate(. ~ V1, data=trainsub, FUN=sum)
+# trainbin<-trainsum
+# trainbin<-trainbin[,-1]
+# class(trainbin)
+# trainbin<-as.logical(trainbin)
+n<-c(5:ncol(trainbin))
+trainbin[,n] = apply(trainbin[,n], 2, function(x) as.logical(x))
+trainbin[,n]=lapply(trainbin[,n],as.numeric)
+testbin[,n] = apply(testbin[,n], 2, function(x) as.logical(x))
+testbin[,n]=lapply(testbin[,n],as.numeric)
+unique(trainbin$V1)
+#pclasseqb<-log(length(trainbin[,which(trainbin$V1=='b')])/nrow(trainbin))
+pclasseqd<-log(length(trainbin[,which(trainbin$V1=='d')])/nrow(trainbin))
+#pclasseqf<-log(length(trainbin[,which(trainbin$V1=='f')])/nrow(trainbin))
+#pclasseqn<-log(length(trainbin[,which(trainbin$V1=='n')])/nrow(trainbin))
+pclasseqr<-log(length(trainbin[,which(trainbin$V1=='r')])/nrow(trainbin))
+#pclasseqw<-log(length(trainbin[,which(trainbin$V1=='w')])/nrow(trainbin))
+#paff$V1[which(paff$)]
+words<-colnames(trainbin[,n])
+trainr<-trainbin[which(trainbin$V1=='r'),]
+traind<-trainbin[which(trainbin$V1=='d'),]
+r=apply(trainr[,n],2,function(x) sum(x))
+rvectr<-unlist(r,use.names = FALSE)
+rvec<-as.matrix(rvectr)
+#rvectoru<-as.vector(rvectoru)
+prob_r<-function(x) 
+{
+     n=log((x+1)/(nrow(trainr)+27205))
+     return(n)
+}
+
+prob_d<-function(x) 
+{
+     n=log((x+1)/(nrow(traind)+27205))
+     return(n)
+}
+#rlist=apply(rvec,1,function(x) x/nrow(trainr))
+rlist=apply(rvec,1,function(x) prob_r(x))
+rvect<-unlist(rlist,use.names = FALSE)
+rvector<-as.matrix(rvect)
+d=apply(traind[,n],2,function(x) sum(x))
+dvector<-unlist(d,use.names = FALSE)
+dvec<-as.matrix(dvector)
+dlist=apply(dvec,1,function(x) prob_d(x))
+dvect<-unlist(dlist,use.names = FALSE)
+dvector<-as.matrix(dvect)
+
+
+rfinal<-cbind(words,rvector)
+dfinal<-cbind(words,dvector)
+
+testsub<-testbin[,-c(1,2,3,4)]
+testmat<-as.matrix(testsub)
+a<-testmat[1,]
+
+bernoullinb<-function(testdata)
+{
+  testdata<-as.matrix(testdata)
+  testdata<-t(testdata)
+rep<-testdata%*%rvector
+dem<-testdata%*%dvector
+rep<-rep+pclasseqr
+dem<-dem+pclasseqd
+if(rep>dem)
+  n<-"r"
+else
+  n<-"d"
+return(c(rep,dem,n))
+}
+
+clss<-apply(testmat,1,function(x) bernoullinb(x))
+prdct<-as.matrix(clss,5,3)
+predict<-as.data.frame(t(prdct))
+colnames(predict)<-c("republic probabilty","democratic probability","predicted class")
+predict<-cbind(testbin[,c(1,2,3,4)],predict)
+print(predict)
+```
+
+#Q3c(iii)
+```{r}
+train_mn<-traindt
+test_mn<-testdt
+pclasseqd_mn<-log(length(train_mn[,which(train_mn$V1=='d')])/nrow(train_mn))
+pclasseqr_mn<-log(length(train_mn[,which(train_mn$V1=='r')])/nrow(train_mn))
+words<-colnames(train_mn[,n])
+trainr_mn<-train_mn[which(train_mn$V1=='r'),]
+traind_mn<-train_mn[which(train_mn$V1=='d'),]
+r_mn=apply(trainr_mn[,n],2,function(x) sum(x))
+rvectr_mn<-unlist(r,use.names = FALSE)
+rvec_mn<-as.matrix(rvectr_mn)
+
+#rvectoru<-as.vector(rvectoru)
+prob_mnr<-function(x) 
+{
+     n=log((x+1)/(nrow(trainr_mn)+27205))
+     return(n)
+}
+
+prob_mnd<-function(x) 
+{
+     n=log((x+1)/(nrow(traind_mn)+27205))
+     return(n)
+}
+rlist_mn=apply(rvec_mn,1,function(x) prob_mnr(x))
+rvector_mn<-unlist(rlist_mn,use.names = FALSE)
+rvector_mn<-as.matrix(rvector_mn)
+d_mn=apply(traind_mn[,n],2,function(x) sum(x))
+dvectr_mn<-unlist(d_mn,use.names = FALSE)
+dvec_mn<-as.matrix(dvectr_mn)
+dlist_mn=apply(dvec_mn,1,function(x) prob_mnd(x))
+dvector_mn<-unlist(dlist_mn,use.names = FALSE)
+dvector_mn<-as.matrix(dvector_mn)
+testsub_mn<-test_mn[,-c(1,2,3,4)]
+testsub_mn<-as.matrix(testsub_mn)
+multinomnb<-function(testdata)
+{
+  testdata<-as.matrix(testdata)
+  testdata<-t(testdata)
+rep<-testdata%*%rvector_mn
+dem<-testdata%*%dvector_mn
+rep<-rep+pclasseqr_mn
+dem<-dem+pclasseqd_mn
+if(rep>dem)
+  n<-"r"
+else
+  n<-"d"
+return(c(rep,dem,n))
+}
+clss_mn<-apply(testsub_mn,1,function(x) multinomnb(x))
+prdct_mn<-as.matrix(clss_mn,5,3)
+predict_mn<-as.data.frame(t(prdct_mn))
+colnames(predict_mn)<-c("republic probabilty","democratic probability","predicted class")
+
+predict_mn<-cbind(test_mn[,c(1,2,3,4)],predict_mn)
+colnames(predict_mn)[which(names(predict_mn) == "V1")] <- "Party affliation"
+print(predict_mn)
+```
+
