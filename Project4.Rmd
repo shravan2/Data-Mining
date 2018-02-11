@@ -164,7 +164,6 @@ p4_svm(c=100)
 
 ---
 title: "SpamClassification"
-author: "Shravan Kumar Bittla   Sameena Thabbasum Satish Penumarthi"
 date: "April 11, 2017"
 output: html_document
 ---
@@ -175,7 +174,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-#Q1a
+#Q1a Email Spam CLassification
 ```{r}
 ## (a) Loading the data
 spam=read.csv("spam.csv")
@@ -192,7 +191,8 @@ test_spam<-spam2[-dt,]
 
 #Q1c
 ```{r}
-## (c) Naive Bayes Classifier
+## (c) 
+Bayes Classifier
 ##model fitting
 library(e1071)
 nb=naiveBayes(spam~.,data=train_spam)
@@ -368,7 +368,7 @@ print(error)
 ```
 
 
-
+#Fruit Dataset
 #q2a
 ```{r}
 fruit = read.table("fruit.txt",sep = ",", header = FALSE)
